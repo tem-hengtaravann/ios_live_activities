@@ -73,7 +73,7 @@ struct TimerLiveActivityWidget: Widget {
                     Text(origin, style: .timer)
                         .font(.caption2.monospacedDigit())
                         .foregroundStyle(.green)
-                        .frame(minWidth: 40)
+                        .frame(width: 42, alignment: .trailing)
                 }
             } minimal: {
                 Image(systemName: paused ? "pause.fill" : "timer")
