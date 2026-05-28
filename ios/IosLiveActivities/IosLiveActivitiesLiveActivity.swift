@@ -9,13 +9,6 @@ import SwiftUI
 
 // MARK: - Attributes
 
-struct IosLiveActivitiesAttributes: ActivityAttributes {
-    struct ContentState: Codable, Hashable {
-        var emoji: String
-    }
-    var name: String
-}
-
 // LiveActivitiesAppAttributes is the type the live_activities Flutter plugin
 // always uses. All data is exchanged via UserDefaults keyed by UUID prefix.
 struct LiveActivitiesAppAttributes: ActivityAttributes, Identifiable {
@@ -139,55 +132,3 @@ private func formatSeconds(_ total: Int) -> String {
     return String(format: "%02d:%02d", m, s)
 }
 
-// MARK: - Simple emoji widget (original template — kept for reference)
-
-struct IosLiveActivitiesLiveActivity: Widget {
-    var body: some WidgetConfiguration {
-        ActivityConfiguration(for: IosLiveActivitiesAttributes.self) { context in
-            VStack {
-                Text("Hello \(context.state.emoji)")
-            }
-            .activityBackgroundTint(Color.cyan)
-            .activitySystemActionForegroundColor(Color.black)
-        } dynamicIsland: { context in
-            DynamicIsland {
-                DynamicIslandExpandedRegion(.leading) { Text("Leading") }
-                DynamicIslandExpandedRegion(.trailing) { Text("Trailing") }
-                DynamicIslandExpandedRegion(.bottom) {
-                    Text("Bottom \(context.state.emoji)")
-                }
-            } compactLeading: {
-                Text("L")
-            } compactTrailing: {
-                Text("T \(context.state.emoji)")
-            } minimal: {
-                Text(context.state.emoji)
-            }
-            .keylineTint(Color.red)
-        }
-    }
-}
-
-// MARK: - Previews
-
-extension IosLiveActivitiesAttributes {
-    fileprivate static var preview: IosLiveActivitiesAttributes {
-        IosLiveActivitiesAttributes(name: "World")
-    }
-}
-
-extension IosLiveActivitiesAttributes.ContentState {
-    fileprivate static var smiley: IosLiveActivitiesAttributes.ContentState {
-        IosLiveActivitiesAttributes.ContentState(emoji: "😀")
-    }
-    fileprivate static var starEyes: IosLiveActivitiesAttributes.ContentState {
-        IosLiveActivitiesAttributes.ContentState(emoji: "🤩")
-    }
-}
-
-#Preview("Notification", as: .content, using: IosLiveActivitiesAttributes.preview) {
-    IosLiveActivitiesLiveActivity()
-} contentStates: {
-    IosLiveActivitiesAttributes.ContentState.smiley
-    IosLiveActivitiesAttributes.ContentState.starEyes
-}

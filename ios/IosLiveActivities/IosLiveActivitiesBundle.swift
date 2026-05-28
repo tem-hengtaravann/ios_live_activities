@@ -13,7 +13,6 @@ struct IosLiveActivitiesBundle: WidgetBundle {
     var body: some Widget {
         IosLiveActivities()
         IosLiveActivitiesControl()
-        IosLiveActivitiesLiveActivity()
         TimerLiveActivityWidget()
     }
 }

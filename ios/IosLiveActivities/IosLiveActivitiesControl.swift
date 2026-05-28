@@ -5,6 +5,7 @@
 //  Created by lms-taravann on 27/5/26.
 //
 
+import ActivityKit
 import AppIntents
 import SwiftUI
 import WidgetKit
@@ -42,7 +43,7 @@ extension IosLiveActivitiesControl {
         }
 
         func currentValue(configuration: TimerConfiguration) async throws -> Value {
-            let isRunning = true // Check if the timer is running
+            let isRunning = !Activity<LiveActivitiesAppAttributes>.activities.isEmpty
             return IosLiveActivitiesControl.Value(isRunning: isRunning, name: configuration.timerName)
         }
     }
@@ -71,7 +72,26 @@ struct StartTimerIntent: SetValueIntent {
     }
 
     func perform() async throws -> some IntentResult {
-        // Start the timer…
+        if value {
+            // Start a fresh live activity from the control widget.
+            let attrs = LiveActivitiesAppAttributes()
+            let startMs = Date().timeIntervalSince1970 * 1000
+            sharedDefault.set(startMs, forKey: attrs.prefixedKey("startTime"))
+            sharedDefault.set(false,   forKey: attrs.prefixedKey("paused"))
+            sharedDefault.set(0,       forKey: attrs.prefixedKey("elapsedSeconds"))
+            let content = ActivityContent(
+                state: LiveActivitiesAppAttributes.ContentState(),
+                staleDate: nil
+            )
+            _ = try? Activity<LiveActivitiesAppAttributes>.request(
+                attributes: attrs,
+                content: content
+            )
+        } else {
+            for activity in Activity<LiveActivitiesAppAttributes>.activities {
+                await activity.end(dismissalPolicy: .immediate)
+            }
+        }
         return .result()
     }
 }

@@ -28,7 +28,7 @@ class TimerPage extends StatefulWidget {
 
 enum _Status { idle, running, paused }
 
-class _TimerPageState extends State<TimerPage> {
+class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
   final _plugin = LiveActivities();
   bool _ready = false;
 
@@ -40,10 +40,26 @@ class _TimerPageState extends State<TimerPage> {
   DateTime? _origin;
   Timer? _ticker;
 
+  // ActivityKit's system UUID returned by createActivity — required for
+  // updateActivity/endActivity (the plugin matches by system ID, not the
+  // user-supplied 'timer' string).
+  String? _activityId;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initPlugin();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Resync elapsed from the absolute origin so background drift is corrected.
+    if (state == AppLifecycleState.resumed &&
+        _status == _Status.running &&
+        _origin != null) {
+      setState(() => _elapsed = DateTime.now().difference(_origin!));
+    }
   }
 
   Future<void> _initPlugin() async {
@@ -56,6 +72,7 @@ class _TimerPageState extends State<TimerPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _ticker?.cancel();
     _plugin.dispose();
     super.dispose();
@@ -81,10 +98,14 @@ class _TimerPageState extends State<TimerPage> {
       'paused': false,
     };
 
-    if (isResume) {
-      await _plugin.updateActivity('timer', data);
-    } else {
-      await _plugin.createActivity('timer', data);
+    try {
+      if (isResume && _activityId != null) {
+        await _plugin.updateActivity(_activityId!, data);
+      } else {
+        _activityId = await _plugin.createActivity('timer', data);
+      }
+    } catch (e) {
+      _showActivityError(e);
     }
   }
 
@@ -92,11 +113,17 @@ class _TimerPageState extends State<TimerPage> {
     _ticker?.cancel();
     _ticker = null;
     setState(() => _status = _Status.paused);
-    await _plugin.updateActivity('timer', {
-      'startTime': _origin?.millisecondsSinceEpoch.toDouble() ?? 0.0,
-      'paused': true,
-      'elapsedSeconds': _elapsed.inSeconds,
-    });
+    if (_activityId != null) {
+      try {
+        await _plugin.updateActivity(_activityId!, {
+          'startTime': _origin?.millisecondsSinceEpoch.toDouble() ?? 0.0,
+          'paused': true,
+          'elapsedSeconds': _elapsed.inSeconds,
+        });
+      } catch (e) {
+        _showActivityError(e);
+      }
+    }
   }
 
   Future<void> _reset() async {
@@ -107,7 +134,21 @@ class _TimerPageState extends State<TimerPage> {
       _status = _Status.idle;
       _elapsed = Duration.zero;
     });
-    await _plugin.endActivity('timer');
+    if (_activityId != null) {
+      try {
+        await _plugin.endActivity(_activityId!);
+      } catch (e) {
+        _showActivityError(e);
+      }
+      _activityId = null;
+    }
+  }
+
+  void _showActivityError(Object e) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Live Activity unavailable: $e')),
+    );
   }
 
   // ── UI ────────────────────────────────────────────────────────
